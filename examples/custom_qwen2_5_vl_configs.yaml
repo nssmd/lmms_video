@@ -1,0 +1,205 @@
+# =============================================================================
+# 自定义 Qwen2 模型配置 - 使用LLaMA tokenizer
+# 60M / 130M / 350M 三种配置 (真实参数大小)
+# =============================================================================
+
+# 60M 参数配置blob_
+- type: trainer
+  config:
+    trainer_type: hf_trainer
+    
+    dataset_config:
+      dataset_type: text  # 文本数据集 (包含vision token)
+      dataset_format: json  # 改为json格式
+      datasets:
+        - path: "/zehui/output_laion20M/laion_consolidate/*.jsonl"
+          data_folder: ""
+          data_type: json  # 指定为json类型
+      
+      processor_config:
+        processor_name: "meta-llama/Llama-2-7b-hf"  # 使用LLaMA tokenizer
+        processor_type: "qwen2"
+      
+      packing: true
+      packing_strategy: first_fit
+      packing_length: 4096
+    
+    # 60M 模型配置
+    model_config:
+      load_from_config:
+        model_type: "qwen2"
+        config:
+          # LLaMA tokenizer配置
+          vocab_size: 32000  # LLaMA的词汇表大小
+          max_position_embeddings: 4096  # LLaMA标准长度
+          rope_theta: 10000.0           # LLaMA标准值
+          
+          # 60M 文本模型配置
+          hidden_size: 512
+          intermediate_size: 1376
+          num_hidden_layers: 8
+          num_attention_heads: 8
+          num_key_value_heads: 8
+          
+          # 其他配置
+          tie_word_embeddings: false
+          use_cache: true
+          attention_dropout: 0.0
+          hidden_dropout: 0.0
+          initializer_range: 0.02
+          
+      attn_implementation: "flash_attention_2"
+    
+    # 训练参数
+    per_device_train_batch_size: 4  # 小模型可用更大batch
+    learning_rate: 3e-4             # 从头训练用更高学习率
+    weight_decay: 0.01
+    gradient_accumulation_steps: 2
+    gradient_checkpointing: true
+    num_train_epochs: 3
+    save_steps: 500
+    save_total_limit: 2
+    output_dir: "./output/qwen2_60m"
+    run_name: "qwen2_60m_llama_tokenizer"
+    logging_steps: 10
+    bf16: true
+    lr_scheduler_type: "cosine"
+    warmup_ratio: 0.1
+    use_liger_kernel: true
+    use_rmpad: true
+
+---
+
+# 130M 参数配置  
+- type: trainer
+  config:
+    trainer_type: hf_trainer
+    
+    dataset_config:
+      dataset_type: text  # 文本数据集 (包含vision token)
+      dataset_format: json  # 改为json格式
+      datasets:
+        - path: "/zehui/output_laion20M/laion_consolidate/*.jsonl"
+          data_folder: ""
+          data_type: json  # 指定为json类型
+      
+      processor_config:
+        processor_name: "meta-llama/Llama-2-7b-hf"  # 使用LLaMA tokenizer
+        processor_type: "qwen2"
+      
+      packing: true
+      packing_strategy: first_fit
+      packing_length: 4096
+    
+    # 130M 模型配置
+    model_config:
+      load_from_config:
+        model_type: "qwen2"
+        config:
+          # LLaMA tokenizer配置
+          vocab_size: 32000  # LLaMA的词汇表大小
+          max_position_embeddings: 4096  # LLaMA标准长度
+          rope_theta: 10000.0           # LLaMA标准值
+          
+          # 130M 文本模型配置
+          hidden_size: 768
+          intermediate_size: 2048
+          num_hidden_layers: 12
+          num_attention_heads: 12
+          num_key_value_heads: 2  # 使用GQA
+          
+          tie_word_embeddings: false
+          use_cache: true
+          attention_dropout: 0.0
+          hidden_dropout: 0.0
+          initializer_range: 0.02
+          
+      attn_implementation: "flash_attention_2"
+    
+    # 训练参数
+    per_device_train_batch_size: 2  # 130M模型可用稍大batch
+    learning_rate: 2e-4             # 从头训练用更高学习率
+    weight_decay: 0.01
+    gradient_accumulation_steps: 4
+    gradient_checkpointing: true
+    num_train_epochs: 3
+    save_steps: 300
+    save_total_limit: 2
+    output_dir: "./output/qwen2_130m"
+    run_name: "qwen2_130m_llama_tokenizer"
+    logging_steps: 10
+    bf16: true
+    lr_scheduler_type: "cosine"
+    warmup_ratio: 0.1
+    use_liger_kernel: true
+    use_rmpad: true
+
+---
+
+# 350M 参数配置
+- type: trainer
+  config:
+    trainer_type: hf_trainer
+    
+    dataset_config:
+      dataset_type: text  # 文本数据集 (包含vision token)
+      dataset_format: json  # 改为json格式
+      datasets:
+        - path: "/zehui/output_laion20M/laion_consolidate/*.jsonl"
+          data_folder: ""
+          data_type: json  # 指定为json类型
+      
+      processor_config:
+        processor_name: "meta-llama/Llama-2-7b-hf"  # 使用LLaMA tokenizer
+        processor_type: "qwen2"
+      
+      packing: true
+      packing_strategy: first_fit
+      packing_length: 4096
+    
+    # 350M 模型配置
+    model_config:
+      load_from_config:
+        model_type: "qwen2"
+        config:
+          # LLaMA tokenizer配置
+          vocab_size: 32000  # LLaMA的词汇表大小
+          max_position_embeddings: 4096  # LLaMA标准长度
+          rope_theta: 10000.0           # LLaMA标准值
+          
+          # 350M 文本模型配置
+          hidden_size: 1024
+          intermediate_size: 2736
+          num_hidden_layers: 24
+          num_attention_heads: 16
+          num_key_value_heads: 2  # 使用GQA
+          
+          tie_word_embeddings: false
+          use_cache: true
+          attention_dropout: 0.0
+          hidden_dropout: 0.0
+          initializer_range: 0.02
+          
+      attn_implementation: "flash_attention_2"
+    
+    # 训练参数
+    per_device_train_batch_size: 1  # 350M模型较大
+    learning_rate: 1e-4             # 从头训练用更高学习率
+    weight_decay: 0.01
+    gradient_accumulation_steps: 8
+    gradient_checkpointing: true
+    num_train_epochs: 3
+    save_steps: 200
+    save_total_limit: 2
+    output_dir: "./output/qwen2_350m"
+    run_name: "qwen2_350m_llama_tokenizer"
+    logging_steps: 10
+    bf16: true
+    lr_scheduler_type: "cosine"
+    warmup_ratio: 0.1
+    use_liger_kernel: true
+    use_rmpad: true
+    fsdp2: true
+    fsdp_config:
+      transformer_layer_cls_to_wrap: ["Qwen2DecoderLayer"]  # 改为Qwen2
+      reshard_after_forward: false

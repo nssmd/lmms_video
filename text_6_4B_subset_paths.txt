@@ -1,0 +1,38 @@
+# TEXT 6.4B tokens subset (Parquet format) (Parquet format)
+# 实际tokens: 6.54B
+# 文件数量: 34
+
+/blob/c4/en/c4-train.00151-of-01024.parquet
+/blob/c4/en/c4-train.00800-of-01024.parquet
+/blob/c4/en/c4-train.00346-of-01024.parquet
+/blob/c4/en/c4-train.00652-of-01024.parquet
+/blob/c4/en/c4-train.00615-of-01024.parquet
+/blob/c4/en/c4-train.00189-of-01024.parquet
+/blob/c4/en/c4-train.00412-of-01024.parquet
+/blob/c4/en/c4-train.00696-of-01024.parquet
+/blob/c4/en/c4-train.00809-of-01024.parquet
+/blob/c4/en/c4-train.00527-of-01024.parquet
+/blob/c4/en/c4-train.00648-of-01024.parquet
+/blob/c4/en/c4-train.00756-of-01024.parquet
+/blob/c4/en/c4-train.00125-of-01024.parquet
+/blob/c4/en/c4-train.00717-of-01024.parquet
+/blob/c4/en/c4-train.00454-of-01024.parquet
+/blob/c4/en/c4-train.00625-of-01024.parquet
+/blob/c4/en/c4-train.00207-of-01024.parquet
+/blob/c4/en/c4-train.00414-of-01024.parquet
+/blob/c4/en/c4-train.00549-of-01024.parquet
+/blob/c4/en/c4-train.00895-of-01024.parquet
+/blob/c4/en/c4-train.00204-of-01024.parquet
+/blob/c4/en/c4-train.00780-of-01024.parquet
+/blob/c4/en/c4-train.01020-of-01024.parquet
+/blob/c4/en/c4-train.00513-of-01024.parquet
+/blob/c4/en/c4-train.00853-of-01024.parquet
+/blob/c4/en/c4-train.00707-of-01024.parquet
+/blob/c4/en/c4-train.00405-of-01024.parquet
+/blob/c4/en/c4-train.00496-of-01024.parquet
+/blob/c4/en/c4-train.00235-of-01024.parquet
+/blob/c4/en/c4-train.00170-of-01024.parquet
+/blob/c4/en/c4-train.00424-of-01024.parquet
+/blob/c4/en/c4-train.00643-of-01024.parquet
+/blob/c4/en/c4-train.00467-of-01024.parquet
+/blob/c4/en/c4-train.00967-of-01024.parquet

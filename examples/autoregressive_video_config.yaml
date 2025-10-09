@@ -1,0 +1,95 @@
+# 自回归视频重建训练配置示例
+# 参考LLaVA-NeXT的自回归loss实现
+
+- type: trainer
+  config:
+    trainer_type: autoregressive_trainer  # 使用AutoregressiveTrainer
+
+    # 自回归重建配置
+    enable_autoregressive: true  # 启用自回归视频重建
+
+    # 数据集配置
+    dataset_config:
+      type: vision  # 使用视觉数据集
+      dataset_name: "your_video_dataset"
+      data_path: "/path/to/your/video/data"
+      data_folder: "/path/to/video/files"
+      fps: 1  # 视频采样帧率
+
+      # 数据格式示例:
+      # JSON格式:
+      # {
+      #   "messages": [
+      #     {
+      #       "role": "user",
+      #       "content": [
+      #         {"type": "video_url", "video_url": {"url": "path/to/video.mp4"}},
+      #         {"type": "text", "text": "Describe this video"}
+      #       ]
+      #     },
+      #     {
+      #       "role": "assistant",
+      #       "content": [{"type": "text", "text": "Response"}]
+      #     }
+      #   ]
+      # }
+
+    # 模型配置
+    model_config:
+      model_name_or_path: "lmms-lab/llava-onevision-qwen2-7b-ov"
+
+      # 自回归模块配置（在模型初始化后设置）
+      autoregressive_config:
+        embedding_dim: 1152  # 视觉嵌入维度
+        num_hist: 3  # 历史帧数量
+        loss_weight: 0.1  # 自回归损失权重（相对于主损失）
+        num_heads: 8  # 注意力头数
+        num_layers: 3  # Transformer解码器层数
+
+        # 帧级别mask配置（关键！）
+        use_frame_causal_mask: true  # 启用帧级别因果mask（推荐）
+        # 每一帧只能看到之前的帧，确保自回归预测的因果性
+
+        # 快慢帧配置（可选）
+        use_fast_slow_frames: false  # 是否启用快慢帧机制
+        fast_stride: 1  # 快帧采样步长（高密度采样）
+        slow_stride: 4  # 慢帧采样步长（稀疏采样）
+        num_fast: 8  # 快帧数量
+        num_slow: 8  # 慢帧数量
+        # 快帧：捕捉细节运动（最近的8帧，步长1）
+        # 慢帧：理解长时序上下文（整个视频采样8帧）
+
+    # 处理器配置
+    processor_config:
+      processor_name: "llava_processor"
+      max_pixels: 1003520
+      min_pixels: 4096
+
+    # 训练参数
+    output_dir: "./output/autoregressive_video"
+    num_train_epochs: 3
+    per_device_train_batch_size: 1
+    gradient_accumulation_steps: 8
+    learning_rate: 2.0e-5
+
+    # 优化器和调度器
+    optim: "adamw_torch"
+    lr_scheduler_type: "cosine"
+    warmup_ratio: 0.03
+
+    # 保存和日志
+    save_strategy: "steps"
+    save_steps: 500
+    save_total_limit: 3
+    logging_steps: 10
+
+    # 性能优化
+    bf16: true
+    tf32: true
+    dataloader_num_workers: 4
+    gradient_checkpointing: true
+
+    # FSDP配置（多GPU训练）
+    fsdp: "full_shard auto_wrap"
+    fsdp_config:
+      transformer_layer_cls_to_wrap: "Qwen2DecoderLayer"

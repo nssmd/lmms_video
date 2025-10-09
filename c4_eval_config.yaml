@@ -1,0 +1,13 @@
+dataset_type: text
+dataset_format: yaml
+
+datasets:
+  - path: "/blob/c4/en/*validation*.json"
+    data_folder: ""
+    data_type: json
+
+processor_config:
+  processor_name: "NousResearch/Llama-2-7b-hf"
+  processor_type: "qwen2"
+
+packing: false  # 验证集不使用packing
