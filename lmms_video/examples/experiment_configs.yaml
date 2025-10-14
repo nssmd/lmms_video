@@ -1,0 +1,430 @@
+# =============================================================================
+# 六组实验配置 (基于Token数量)
+# 60M: 1B tokens (视觉+文本混合 vs 纯文本)
+# 130M: 2B tokens (视觉+文本混合 vs 纯文本)  
+# 350M: 6.4B tokens (视觉+文本混合 vs 纯文本)
+# 
+# Token计算: tokens_per_step = batch_size × grad_acc × seq_len × num_gpus
+# 假设单GPU: 所有配置 = 131,072 tokens/step
+# =============================================================================
+
+# ========== 实验1: 60M模型 - 视觉+文本混合数据 ==========
+- type: trainer
+  config:
+    trainer_type: hf_trainer
+    
+    dataset_config:
+      dataset_type: text
+      dataset_format: yaml
+
+      datasets:
+        # 视觉token数据 - 1B tokens子集
+        - path: "/home/v-zimowen/lmms-engine-mini/vision_1_0B_subset_paths.txt"
+          data_folder: ""
+          data_type: txt
+        # C4文本数据 - 1B tokens子集
+        - path: "/home/v-zimowen/lmms-engine-mini/text_1_0B_subset_paths.txt"
+          data_folder: ""
+          data_type: txt
+      
+      processor_config:
+        processor_name: "NousResearch/Llama-2-7b-hf"  # 使用LLaMA tokenizer (NousResearch镜像)
+        processor_type: "qwen2"
+      
+      packing: true
+      packing_strategy: first_fit
+      packing_length: 4096
+      shuffle: true
+      eval_dataset_path: "/home/v-zimowen/lmms-engine-mini/c4_eval_config.yaml"
+
+    
+    model_config:
+      load_from_config:
+        model_type: "qwen2"
+        config:
+          vocab_size: 64770  # LLaMA基础32000 + Vision tokens 32770 = 64770
+          max_position_embeddings: 4096
+          rope_theta: 10000.0
+          hidden_size: 512
+          intermediate_size: 1376
+          num_hidden_layers: 8
+          num_attention_heads: 8
+          num_key_value_heads: 8
+          tie_word_embeddings: false
+          use_cache: false
+          attention_dropout: 0.0
+          hidden_dropout: 0.0
+          initializer_range: 0.02
+      attn_implementation: "sdpa"  # 兼容更多GPU
+    
+    per_device_train_batch_size: 2  # 减少内存使用，保持总token数1B不变
+    learning_rate: 0.0002
+    weight_decay: 0.01
+    gradient_accumulation_steps: 4
+    gradient_checkpointing: true
+    num_train_epochs: 1
+    save_strategy: "epoch"
+    output_dir: "./output/exp1_60m_vision_text"
+    run_name: "exp1_60m_vision_text_1epoch"
+    dataloader_num_workers: 0  # 流式数据集必须使用0个worker
+    logging_steps: 50
+
+    bf16: true
+    lr_scheduler_type: "cosine"
+    warmup_ratio: 0.05
+    use_liger_kernel: true
+    use_rmpad: true
+    group_by_length: true
+    eval_strategy: "steps"
+    eval_steps: 100
+
+---
+
+# ========== 实验2: 60M模型 - 纯文本数据 ==========
+- type: trainer
+  config:
+    trainer_type: hf_trainer
+    
+    dataset_config:
+      dataset_type: text
+      dataset_format: yaml
+
+      datasets:
+        # C4文本数据 - 1B tokens子集 (纯文本实验)
+        - path: "/home/v-zimowen/lmms-engine-mini/text_1_0B_subset_paths.txt"
+          data_folder: ""
+          data_type: txt
+      
+      processor_config:
+        processor_name: "NousResearch/Llama-2-7b-hf"  # 使用LLaMA tokenizer (NousResearch镜像)
+        processor_type: "qwen2"
+      
+      packing: true
+      packing_strategy: first_fit
+      packing_length: 4096
+      shuffle: true
+      eval_dataset_path: "/home/v-zimowen/lmms-engine-mini/c4_eval_config.yaml"
+
+    
+    model_config:
+      load_from_config:
+        model_type: "qwen2"
+        config:
+          vocab_size: 64770  # LLaMA基础32000 + Vision tokens 32770 = 64770
+          max_position_embeddings: 4096
+          rope_theta: 10000.0
+          hidden_size: 512
+          intermediate_size: 1376
+          num_hidden_layers: 8
+          num_attention_heads: 8
+          num_key_value_heads: 8
+          tie_word_embeddings: false
+          use_cache: false
+          attention_dropout: 0.0
+          hidden_dropout: 0.0
+          initializer_range: 0.02
+      attn_implementation: "sdpa"  # 兼容更多GPU
+    
+    per_device_train_batch_size: 2  # 减少内存使用，保持总token数1B不变
+    learning_rate: 0.0002
+    weight_decay: 0.01
+    gradient_accumulation_steps: 4
+    gradient_checkpointing: true
+    num_train_epochs: 1
+    save_strategy: "epoch"
+    output_dir: "./output/exp2_60m_text_only"
+    run_name: "exp2_60m_text_only_1epoch"
+    dataloader_num_workers: 0  # 流式数据集必须使用0个worker
+    logging_steps: 50
+
+    bf16: true
+    lr_scheduler_type: "cosine"
+    warmup_ratio: 0.05
+    use_liger_kernel: true
+    use_rmpad: true
+    group_by_length: true
+    eval_strategy: "steps"
+    eval_steps: 100
+
+---
+
+# ========== 实验3: 130M模型 - 视觉+文本混合数据 ==========
+- type: trainer
+  config:
+    trainer_type: hf_trainer
+    
+    dataset_config:
+      dataset_type: text
+      dataset_format: yaml
+
+      datasets:
+        # 视觉token数据 - 2B tokens子集
+        - path: "/home/v-zimowen/lmms-engine-mini/vision_2_0B_subset_paths.txt"
+          data_folder: ""
+          data_type: txt
+        # C4文本数据 - 2B tokens子集
+        - path: "/home/v-zimowen/lmms-engine-mini/text_2_0B_subset_paths.txt"
+          data_folder: ""
+          data_type: txt
+
+      
+      processor_config:
+        processor_name: "NousResearch/Llama-2-7b-hf"  # 使用LLaMA tokenizer (NousResearch镜像)
+        processor_type: "qwen2"
+      
+      packing: true
+      packing_strategy: first_fit
+      packing_length: 4096
+      shuffle: true
+      eval_dataset_path: "/home/v-zimowen/lmms-engine-mini/c4_eval_config.yaml"
+
+    
+    model_config:
+      load_from_config:
+        model_type: "qwen2"
+        config:
+          vocab_size: 64770  # LLaMA基础32000 + Vision tokens 32770 = 64770
+          max_position_embeddings: 4096
+          rope_theta: 10000.0
+          hidden_size: 768
+          intermediate_size: 2048
+          num_hidden_layers: 12
+          num_attention_heads: 12
+          num_key_value_heads: 2
+          tie_word_embeddings: false
+          use_cache: false
+          attention_dropout: 0.0
+          hidden_dropout: 0.0
+          initializer_range: 0.02
+      attn_implementation: "sdpa"  # 兼容更多GPU
+    
+    per_device_train_batch_size: 2  # 减少内存使用，保持总token数2B不变
+    learning_rate: 0.00015
+    weight_decay: 0.01
+    gradient_accumulation_steps: 4  # 调整保持每步tokens=131,072
+    gradient_checkpointing: true
+    num_train_epochs: 1
+    dataloader_num_workers: 0  # 流式数据集必须使用0个worker
+    save_strategy: "epoch"
+    output_dir: "./output/exp3_130m_vision_text"
+    run_name: "exp3_130m_vision_text_1epoch"
+    logging_steps: 50
+
+    bf16: true
+    lr_scheduler_type: "cosine"
+    warmup_ratio: 0.05
+    use_liger_kernel: true
+    use_rmpad: true
+    group_by_length: true
+    eval_strategy: "steps"
+    eval_steps: 100
+
+---
+
+# ========== 实验4: 130M模型 - 纯文本数据 ==========
+- type: trainer
+  config:
+    trainer_type: hf_trainer
+    
+    dataset_config:
+      dataset_type: text
+      dataset_format: yaml
+
+      datasets:
+        # C4文本数据 - 2B tokens子集 (纯文本实验)
+        - path: "/home/v-zimowen/lmms-engine-mini/text_2_0B_subset_paths.txt"
+          data_folder: ""
+          data_type: txt
+      
+      processor_config:
+        processor_name: "NousResearch/Llama-2-7b-hf"  # 使用LLaMA tokenizer (NousResearch镜像)
+        processor_type: "qwen2"
+      
+      packing: true
+      packing_strategy: first_fit
+      packing_length: 4096
+      shuffle: true
+      eval_dataset_path: "/home/v-zimowen/lmms-engine-mini/c4_eval_config.yaml"
+
+    
+    model_config:
+      load_from_config:
+        model_type: "qwen2"
+        config:
+          vocab_size: 64770  # LLaMA基础32000 + Vision tokens 32770 = 64770
+          max_position_embeddings: 4096
+          rope_theta: 10000.0
+          hidden_size: 768
+          intermediate_size: 2048
+          num_hidden_layers: 12
+          num_attention_heads: 12
+          num_key_value_heads: 2
+          tie_word_embeddings: false
+          use_cache: false
+          attention_dropout: 0.0
+          hidden_dropout: 0.0
+          initializer_range: 0.02
+      attn_implementation: "sdpa"  # 兼容更多GPU
+    
+    per_device_train_batch_size: 2  # 减少内存使用，保持总token数2B不变
+    learning_rate: 0.00015
+    weight_decay: 0.01
+    gradient_accumulation_steps: 4  # 调整保持每步tokens=131,072
+    gradient_checkpointing: true
+    num_train_epochs: 1
+    dataloader_num_workers: 0  # 流式数据集必须使用0个worker
+    save_strategy: "epoch"
+    output_dir: "./output/exp4_130m_text_only"
+    run_name: "exp4_130m_text_only_1epoch"
+    logging_steps: 50
+
+    bf16: true
+    lr_scheduler_type: "cosine"
+    warmup_ratio: 0.05
+    use_liger_kernel: true
+    use_rmpad: true
+    group_by_length: true
+    eval_strategy: "steps"
+    eval_steps: 100
+
+---
+
+# ========== 实验5: 350M模型 - 视觉+文本混合数据 ==========
+- type: trainer
+  config:
+    trainer_type: hf_trainer
+    
+    dataset_config:
+      dataset_type: text
+      dataset_format: yaml
+
+      datasets:
+        # 视觉token数据 - 6.4B tokens子集
+        - path: "/home/v-zimowen/lmms-engine-mini/vision_6_4B_subset_paths.txt"
+          data_folder: ""
+          data_type: txt
+        # C4文本数据 - 6.4B tokens子集
+        - path: "/home/v-zimowen/lmms-engine-mini/text_6_4B_subset_paths.txt"
+          data_folder: ""
+          data_type: txt
+
+      
+      processor_config:
+        processor_name: "NousResearch/Llama-2-7b-hf"  # 使用LLaMA tokenizer (NousResearch镜像)
+        processor_type: "qwen2"
+      
+      packing: true
+      packing_strategy: first_fit
+      packing_length: 4096
+      shuffle: true
+      eval_dataset_path: "/home/v-zimowen/lmms-engine-mini/c4_eval_config.yaml"
+
+    
+    model_config:
+      load_from_config:
+        model_type: "qwen2"
+        config:
+          vocab_size: 64770  # LLaMA基础32000 + Vision tokens 32770 = 64770
+          max_position_embeddings: 4096
+          rope_theta: 10000.0
+          hidden_size: 1024
+          intermediate_size: 2736
+          num_hidden_layers: 24
+          num_attention_heads: 16
+          num_key_value_heads: 2
+          tie_word_embeddings: false
+          use_cache: false
+          attention_dropout: 0.0
+          hidden_dropout: 0.0
+          initializer_range: 0.02
+      attn_implementation: "sdpa"  # 兼容更多GPU
+    
+    per_device_train_batch_size: 1  # 减少内存使用，保持总token数6.4B不变
+    learning_rate: 0.0001
+    weight_decay: 0.01
+    gradient_accumulation_steps: 8  # 调整保持每步tokens=131,072
+    gradient_checkpointing: true
+    num_train_epochs: 1
+    dataloader_num_workers: 0  # 流式数据集必须使用0个worker
+    save_strategy: "epoch"
+    output_dir: "./output/exp5_350m_vision_text"
+    run_name: "exp5_350m_vision_text_1epoch"
+    logging_steps: 50
+
+    bf16: true
+    lr_scheduler_type: "cosine"
+    warmup_ratio: 0.05
+    use_liger_kernel: true
+    use_rmpad: true
+    group_by_length: true
+    eval_strategy: "steps"
+    eval_steps: 100
+
+---
+
+# ========== 实验6: 350M模型 - 纯文本数据 ==========
+- type: trainer
+  config:
+    trainer_type: hf_trainer
+    
+    dataset_config:
+      dataset_type: text
+      dataset_format: yaml
+
+      datasets:
+        # C4文本数据 - 6.4B tokens子集 (纯文本实验)
+        - path: "/home/v-zimowen/lmms-engine-mini/text_6_4B_subset_paths.txt"
+          data_folder: ""
+          data_type: txt
+
+      
+      processor_config:
+        processor_name: "NousResearch/Llama-2-7b-hf"  # 使用LLaMA tokenizer (NousResearch镜像)
+        processor_type: "qwen2"
+      
+      packing: true
+      packing_strategy: first_fit
+      packing_length: 4096
+      shuffle: true
+      eval_dataset_path: "/home/v-zimowen/lmms-engine-mini/c4_eval_config.yaml"
+
+    
+    model_config:
+      load_from_config:
+        model_type: "qwen2"
+        config:
+          vocab_size: 64770  # LLaMA基础32000 + Vision tokens 32770 = 64770
+          max_position_embeddings: 4096
+          rope_theta: 10000.0
+          hidden_size: 1024
+          intermediate_size: 2736
+          num_hidden_layers: 24
+          num_attention_heads: 16
+          num_key_value_heads: 2
+          tie_word_embeddings: false
+          use_cache: false
+          attention_dropout: 0.0
+          hidden_dropout: 0.0
+          initializer_range: 0.02
+      attn_implementation: "sdpa"  # 兼容更多GPU
+    
+    per_device_train_batch_size: 1  # 减少内存使用，保持总token数6.4B不变
+    learning_rate: 0.0001
+    weight_decay: 0.01
+    gradient_accumulation_steps: 8  # 调整保持每步tokens=131,072
+    gradient_checkpointing: true
+    num_train_epochs: 1
+    dataloader_num_workers: 0  # 流式数据集必须使用0个worker
+    save_strategy: "epoch"
+    output_dir: "./output/exp6_350m_text_only"
+    run_name: "exp6_350m_text_only_1epoch"
+    logging_steps: 50
+
+    bf16: true
+    lr_scheduler_type: "cosine"
+    warmup_ratio: 0.05
+    use_liger_kernel: true
+    use_rmpad: true
+    group_by_length: true
+    eval_strategy: "steps"
+    eval_steps: 100

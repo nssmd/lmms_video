@@ -1,0 +1,15 @@
+# TEXT 2.0B tokens subset (Parquet format) (Parquet format) (Parquet format) (Parquet format)
+# 实际tokens: 2.11B
+# 文件数量: 11
+
+/blob/c4/en/c4-train.00151-of-01024.parquet
+/blob/c4/en/c4-train.00800-of-01024.parquet
+/blob/c4/en/c4-train.00346-of-01024.parquet
+/blob/c4/en/c4-train.00652-of-01024.parquet
+/blob/c4/en/c4-train.00615-of-01024.parquet
+/blob/c4/en/c4-train.00189-of-01024.parquet
+/blob/c4/en/c4-train.00412-of-01024.parquet
+/blob/c4/en/c4-train.00696-of-01024.parquet
+/blob/c4/en/c4-train.00809-of-01024.parquet
+/blob/c4/en/c4-train.00527-of-01024.parquet
+/blob/c4/en/c4-train.00648-of-01024.parquet

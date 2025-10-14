@@ -1,0 +1,103 @@
+# 快慢帧自回归训练配置
+# 使用 LLaVA-Video-178K 数据集
+# 集成到 lmms-engine 框架
+
+model_name_or_path: "Qwen/Qwen2-VL-7B-Instruct"
+vision_tower: "google/siglip-so400m-patch14-384"
+
+# ==================== 数据配置 ====================
+data_path: "lmms-lab/LLaVA-Video-178K"  # 可以是 HuggingFace 路径或本地路径
+image_folder: null  # 视频数据在 parquet 中
+video_folder: null  # 如果需要本地视频路径
+
+# 视频处理参数
+max_frames_num: 16
+fps: 1.0
+force_sample: true
+video_decode_backend: "decord"
+
+# ==================== 快慢帧自回归配置 ====================
+enable_autoregressive: true
+
+# 快慢帧参数
+autoregressive_config:
+  # 基础参数
+  embedding_dim: 1152
+  hidden_size: 3584  # Qwen2-VL-7B 的 hidden_size
+  loss_weight: 0.15
+  num_heads: 8
+  num_layers: 3
+
+  # 快慢帧核心参数
+  mm_spatial_pool_stride: 4              # 慢帧池化步长
+  mm_spatial_pool_mode: "average"         # 池化模式: average/max/bilinear
+  frame_sampling_strategy: "interleave"   # 帧采样策略: interleave/first_slow/uniform
+  slow_frame_ratio: 0.5                   # 慢帧占比
+
+  # 说明:
+  # - 慢帧使用 stride=4 的池化，保留更多细节
+  # - 快帧使用 stride=8 的池化，更大感受野
+  # - interleave 策略: S F S F S F ... (慢快交替)
+  # - first_slow 策略: S S S ... F F F (前面慢后面快)
+  # - uniform 策略: 均匀分布慢帧
+
+# ==================== 训练配置 ====================
+output_dir: "./output/fast_slow_autoregressive"
+num_train_epochs: 3
+per_device_train_batch_size: 2
+per_device_eval_batch_size: 1
+gradient_accumulation_steps: 8
+
+# 优化器
+learning_rate: 2.0e-5
+weight_decay: 0.01
+warmup_ratio: 0.03
+lr_scheduler_type: "cosine"
+optim: "adamw_torch"
+
+# 精度
+bf16: true
+tf32: true
+fp16: false
+
+# 梯度
+max_grad_norm: 1.0
+gradient_checkpointing: true
+
+# ==================== 日志和保存 ====================
+logging_steps: 10
+save_strategy: "steps"
+save_steps: 500
+save_total_limit: 3
+evaluation_strategy: "no"
+
+logging_dir: "./logs"
+report_to: ["tensorboard"]
+logging_first_step: true
+
+# ==================== 数据加载 ====================
+dataloader_num_workers: 4
+dataloader_pin_memory: true
+remove_unused_columns: false
+dataloader_persistent_workers: true
+
+# ==================== 其他 ====================
+seed: 42
+ddp_find_unused_parameters: false
+deepspeed: null  # 如果需要 DeepSpeed，指定配置文件路径
+
+# 模型输出配置
+output_hidden_states: true  # 必须为 true，用于自回归损失
+
+# Tokenizer 配置
+model_max_length: 2048
+padding_side: "right"
+
+# Vision 配置
+image_aspect_ratio: "anyres_max_9"
+mm_patch_merge_type: "spatial_unpad"
+mm_newline_position: "grid"
+
+# 视频特定配置
+modality: "video"
+use_video: true

@@ -1,0 +1,75 @@
+# LLaVA-NeXT 风格的自回归视频重建训练配置
+# 集成了多尺度帧加载和连续自回归损失
+
+- type: trainer
+  config:
+    trainer_type: autoregressive_trainer
+
+    # 数据集配置
+    dataset_config:
+      dataset_name: "your_video_dataset"
+      data_path: "./data/video_train.json"
+      image_folder: "./data/videos"
+      max_video_frames: 16
+      video_sample_rate: 1
+
+    # 模型配置
+    model_config:
+      model_name_or_path: "lmms-lab/llava-onevision-qwen2-7b-ov"
+      vision_tower: "google/siglip-so400m-patch14-384"
+
+      # 自回归重建配置（核心）
+      enable_autoregressive: true
+      autoregressive_config:
+        # 基础参数
+        embedding_dim: 1152
+        num_hist: 3
+        loss_weight: 0.1
+        num_heads: 8
+        num_layers: 3
+
+        # 帧级别因果mask
+        use_frame_causal_mask: true
+
+        # 快慢帧机制
+        use_fast_slow_frames: false
+        fast_stride: 1
+        slow_stride: 4
+        num_fast: 8
+        num_slow: 8
+
+        # LLaVA-NeXT 多尺度特性
+        enable_multiscale_pooling: true
+        mm_spatial_pool_stride: 2
+        mm_spatial_pool_mode: "average"  # 可选: "average", "max", "bilinear"
+        add_faster_video: true  # 添加快速视频流
+
+    # 训练参数
+    output_dir: "./output/llava_next_autoregressive"
+    num_train_epochs: 3
+    per_device_train_batch_size: 2
+    per_device_eval_batch_size: 1
+    gradient_accumulation_steps: 8
+
+    learning_rate: 2e-5
+    weight_decay: 0.0
+    warmup_ratio: 0.03
+    lr_scheduler_type: "cosine"
+
+    # 优化配置
+    bf16: true
+    tf32: true
+    gradient_checkpointing: true
+
+    # 日志和保存
+    logging_steps: 10
+    save_steps: 500
+    save_total_limit: 3
+
+    # 数据加载
+    dataloader_num_workers: 4
+    remove_unused_columns: false
+
+    # 其他
+    seed: 42
+    report_to: "wandb"
