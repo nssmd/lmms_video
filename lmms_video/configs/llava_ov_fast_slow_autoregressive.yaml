@@ -35,8 +35,8 @@
 
     # ==================== 模型配置 ====================
     model_config:
-      # LLaVA-OneVision 基础模型 (使用官方HF版本，配置结构正确)
-      load_from_pretrained_path: "llava-hf/llava-onevision-qwen2-7b-ov-hf"
+      # LLaVA-OneVision 基础模型 (使用 0.5B 版本节省显存)
+      load_from_pretrained_path: "llava-hf/llava-onevision-qwen2-0.5b-ov-hf"
       attn_implementation: "flash_attention_2"
 
       # 所有额外配置放在 overwrite_config 中
@@ -87,6 +87,9 @@
     max_grad_norm: 1.0
     gradient_checkpointing: true
 
+    # ==================== DeepSpeed 配置 ====================
+    deepspeed: "./configs/deepspeed_zero3.json"
+
     # ==================== 日志和保存 ====================
     logging_steps: 10
     save_strategy: "steps"
@@ -106,4 +109,4 @@
 
     # ==================== 其他 ====================
     seed: 42
-    ddp_find_unused_parameters: false
+    ddp_find_unused_parameters: true

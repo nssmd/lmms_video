@@ -351,3 +351,5 @@ git push --set-upstream origin master
 python occupy_gpu.py --all --memory 15
 
 ps aux | grep python | grep -v grep
+ps aux | grep "lmms_engine.launch.cli" | grep -v grep
+ps aux | grep "lmms_engine.launch.cli" | grep -v grep | awk '{print $2}' | xargs kill -9
