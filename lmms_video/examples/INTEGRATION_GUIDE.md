@@ -339,6 +339,10 @@ mask_gen.visualize_mask(mask, title="Frame Causal Mask")
 - DINO-WM (世界模型参考): https://arxiv.org/abs/2401.12345
 - 原始 LLaVA-NeXT 代码: `/home/aiscuser/LLaVA-NeXT-main`
 
----
 
+git push --set-upstream origin master
+---
+  torchrun --nproc_per_node=8 --nnodes=1 \
+    -m lmms_engine.launch.cli \
+    --config configs/llava_ov_fast_slow_autoregressive.yaml
 如有问题，请参考 `VIDEO_RECONSTRUCTION_IMPLEMENTATION.md` 或提交 Issue。

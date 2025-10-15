@@ -1,0 +1,125 @@
+# LLaVA-OneVision + 快慢帧自回归训练配置
+# 使用本地 Parquet 格式的 LLaVA-Video-178K 数据集
+# 集成快慢帧机制和自回归视频重建
+
+- type: trainer
+  config:
+    trainer_type: autoregressive_trainer
+
+    # ==================== 数据集配置 ====================
+    dataset_config:
+      dataset_type: vision
+      dataset_format: parquet  # 使用 parquet 格式
+
+      # Parquet 文件路径（支持通配符）
+      dataset_path: "/blob/LLaVA-Video-178K-parquet/*.parquet"
+      data_folder: /blob/LLaVA-Video-178K-parquet
+
+      # 视频处理参数
+      max_frames_num: 16
+      fps: 1.0
+      force_sample: true
+      video_decode_backend: "decord"
+
+      # Processor 配置
+      processor_config:
+        processor_name: "lmms-lab/llava-onevision-qwen2-7b-ov"
+        processor_type: "llava_onevision"
+        max_pixels: 1003520
+        min_pixels: 4096
+
+      # Packing 配置
+      packing: false
+
+    # ==================== 模型配置 ====================
+    model_config:
+      # LLaVA-OneVision 基础模型
+      load_from_pretrained_path: "lmms-lab/llava-onevision-qwen2-7b-ov"
+      attn_implementation: "flash_attention_2"
+      vision_tower: "google/siglip-so400m-patch14-384"
+
+      # 🔥 启用自回归重建
+      enable_autoregressive: true
+
+      # 🔥🔥 快慢帧 + 自回归配置
+      autoregressive_config:
+        # 基础参数
+        embedding_dim: 1152
+        hidden_size: 3584
+        loss_weight: 0.15
+        num_heads: 8
+        num_layers: 3
+
+        # 快慢帧核心参数
+        mm_spatial_pool_stride: 4
+        mm_spatial_pool_mode: "average"
+        frame_sampling_strategy: "interleave"
+        slow_frame_ratio: 0.5
+
+        # 帧级别因果mask
+        use_frame_causal_mask: true
+
+        # 快慢帧时序采样
+        use_fast_slow_frames: true
+        fast_stride: 1
+        slow_stride: 4
+        num_fast: 8
+        num_slow: 8
+
+        # LLaVA-NeXT 多尺度特性
+        enable_multiscale_pooling: true
+        add_faster_video: true
+
+    # ==================== 训练参数 ====================
+    output_dir: "./output/llava_ov_fast_slow_autoregressive"
+    run_name: "llava_ov_fast_slow_ar"
+
+    num_train_epochs: 3
+    per_device_train_batch_size: 2
+    per_device_eval_batch_size: 1
+    gradient_accumulation_steps: 8
+
+    learning_rate: 2.0e-5
+    weight_decay: 0.01
+    warmup_ratio: 0.03
+    lr_scheduler_type: "cosine"
+    optim: "adamw_torch"
+
+    bf16: true
+    tf32: true
+    fp16: false
+
+    max_grad_norm: 1.0
+    gradient_checkpointing: true
+
+    # ==================== 日志和保存 ====================
+    logging_steps: 10
+    save_strategy: "steps"
+    save_steps: 500
+    save_total_limit: 3
+    evaluation_strategy: "no"
+
+    logging_dir: "./logs"
+    report_to: ["tensorboard"]
+    logging_first_step: true
+
+    # ==================== 数据加载 ====================
+    dataloader_num_workers: 4
+    dataloader_pin_memory: true
+    remove_unused_columns: false
+    dataloader_persistent_workers: true
+
+    # ==================== 其他 ====================
+    seed: 42
+    ddp_find_unused_parameters: false
+    output_hidden_states: true
+    model_max_length: 2048
+    padding_side: "right"
+
+    # Vision 配置
+    image_aspect_ratio: "anyres_max_9"
+    mm_patch_merge_type: "spatial_unpad"
+    mm_newline_position: "grid"
+
+    modality: "video"
+    use_video: true
