@@ -11,6 +11,7 @@ class DatasetConfig:
     processor_config: Union[dict, ProcessorConfig]
     dataset_path: Optional[str] = None  # Optional - used for external files
     datasets: Optional[List[dict]] = None  # Optional - used for inline YAML definitions
+    data_folder: Optional[str] = None  # Optional - base path for video/image files (used with parquet/hf_dataset)
     shuffle: bool = True
     eval_dataset_path: Optional[str] = None
     object_storage: Optional[Literal["azure", "gcs", "none"]] = "none"

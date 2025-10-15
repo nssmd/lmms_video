@@ -492,26 +492,41 @@ class BaseDataset(Dataset):
         return len(self.data_list)
 
     def __getitem__(self, index):
-        if self.config.packing:
-            index_group = self.packing_index[index]
-            data_dict_list = self.load_from_packing(index_group)
-            return data_dict_list
+        # Try to load the sample, if it fails, skip to the next one
+        max_retries = 100  # Avoid infinite loop
+        for attempt in range(max_retries):
+            try:
+                current_index = (index + attempt) % len(self.data_list)
+                
+                if self.config.packing:
+                    index_group = self.packing_index[current_index]
+                    data_dict_list = self.load_from_packing(index_group)
+                    return data_dict_list
 
-        if (
-            self.config.dataset_format == "json"
-            or self.config.dataset_format == "jsonl"
-            or self.config.dataset_format == "arrow"
-        ):
-            data_dict = self.load_from_json(self.data_list[index])
-        elif self.config.dataset_format == "yaml":
-            data_dict = self.load_from_json(
-                self.data_list[index], self.data_folder[index]
-            )
-        elif self.config.dataset_format == "hf_dataset":
-            data_dict = self.load_from_hf(self.data_list[index])
-        else:
-            raise NotImplementedError
-        return data_dict
+                if (
+                    self.config.dataset_format == "json"
+                    or self.config.dataset_format == "jsonl"
+                    or self.config.dataset_format == "arrow"
+                ):
+                    data_dict = self.load_from_json(self.data_list[current_index])
+                elif self.config.dataset_format == "yaml":
+                    data_dict = self.load_from_json(
+                        self.data_list[current_index], self.data_folder[current_index]
+                    )
+                elif self.config.dataset_format == "hf_dataset" or self.config.dataset_format == "parquet":
+                    # Both hf_dataset and parquet are loaded as HuggingFace Dataset objects
+                    data_dict = self.load_from_hf(self.data_list[current_index])
+                else:
+                    raise NotImplementedError
+                return data_dict
+            except Exception as e:
+                # Log the error and try next sample
+                if attempt == 0:  # Only log the first failure for each original index
+                    print(f"Warning: Failed to load sample {current_index}: {str(e)[:100]}, trying next sample...")
+                if attempt == max_retries - 1:
+                    # If all retries failed, raise the error
+                    raise RuntimeError(f"Failed to load {max_retries} consecutive samples starting from index {index}")
+                continue
 
     def load_from_packing(self, index_group):
         if (
@@ -526,7 +541,8 @@ class BaseDataset(Dataset):
                 self.load_from_json(self.data_list[index], self.data_folder[index])
                 for index in index_group
             ]
-        elif self.config.dataset_format == "hf_dataset":
+        elif self.config.dataset_format == "hf_dataset" or self.config.dataset_format == "parquet":
+            # Both hf_dataset and parquet are HuggingFace Dataset objects
             data_dict_list = [
                 self.load_from_hf(self.data_list[index]) for index in index_group
             ]
