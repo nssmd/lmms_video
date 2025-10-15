@@ -344,5 +344,9 @@ git push --set-upstream origin master
 ---
   torchrun --nproc_per_node=8 --nnodes=1 \
     -m lmms_engine.launch.cli \
-    --config configs/llava_ov_fast_slow_autoregressive.yaml
+    --config configs/llava_ov_fast_slow_autoregressive.yaml \
+    > training_output.txt 2>&1
 如有问题，请参考 `VIDEO_RECONSTRUCTION_IMPLEMENTATION.md` 或提交 Issue。
+
+python occupy_gpu.py --all --memory 15
+ps aux | grep python | grep -v grep

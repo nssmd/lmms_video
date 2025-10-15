@@ -69,6 +69,8 @@ class TrainRunner:
             self._apply_liger_kernel()
             # Set to False as we already apply the liger kernel by ourselves
             self.config.trainer_args.use_liger_kernel = False
+        # Setup autoregressive module if enabled
+        self._setup_autoregressive_module()
         self.trainer = self._build_trainer()
 
     def _build_model(self):
@@ -76,10 +78,14 @@ class TrainRunner:
         load_from_config = self.model_config.load_from_config
         if load_from_pretrained_path is not None:
             model_class = create_model_from_pretrained(load_from_pretrained_path)
+
+            # Directly load the model without config conversion
+            # The model weights already have the correct config embedded
             model = model_class.from_pretrained(
                 load_from_pretrained_path,
                 attn_implementation=self.model_config.attn_implementation,
                 torch_dtype=(torch.bfloat16 if self.config.trainer_args.bf16 else None),
+                trust_remote_code=True,
             )
         elif load_from_config is not None:
             model_type = load_from_config.get("model_type", None)
@@ -160,6 +166,79 @@ class TrainRunner:
                 Logging.error(
                     f"Try to apply liger kernel on the language model of the model {model_type}, but failed with exceptions : \n {e}"
                 )
+
+    def _setup_autoregressive_module(self):
+        """Setup autoregressive reconstruction module if enabled"""
+        if not self.model_config.overwrite_config:
+            return
+
+        enable_ar = self.model_config.overwrite_config.get("enable_autoregressive", False)
+        if not enable_ar:
+            return
+
+        Logging.info("🔧 Setting up autoregressive reconstruction module")
+
+        # Get autoregressive config
+        ar_config = self.model_config.overwrite_config.get("autoregressive_config", {})
+
+        # Import and create autoregressive module
+        from ..models.autoregressive_reconstruction import (
+            create_autoregressive_reconstruction_module
+        )
+
+        # Get model's hidden_size (LLM dimension)
+        if hasattr(self.model.config, 'text_config'):
+            hidden_size = self.model.config.text_config.hidden_size
+        elif hasattr(self.model.config, 'hidden_size'):
+            hidden_size = self.model.config.hidden_size
+        else:
+            raise ValueError("Cannot determine model hidden_size for autoregressive module")
+
+        # Get vision tower
+        if hasattr(self.model, 'vision_tower'):
+            vision_tower = self.model.vision_tower
+        elif hasattr(self.model, 'get_vision_tower'):
+            vision_tower = self.model.get_vision_tower()
+        else:
+            raise ValueError("Cannot find vision_tower in model")
+
+        # Create autoregressive module
+        self.model.autoregressive_module = create_autoregressive_reconstruction_module(
+            vision_tower=vision_tower,
+            hidden_size=hidden_size,
+            config=ar_config
+        )
+
+        Logging.info(f"✅ Autoregressive module created with hidden_size={hidden_size}")
+
+        # Monkey-patch the forward method to add autoregressive loss
+        original_forward = self.model.forward
+
+        def forward_with_autoregressive(*args, **kwargs):
+            # Extract video_frames if present
+            video_frames = kwargs.pop('video_frames', None)
+
+            # Call original forward
+            outputs = original_forward(*args, **kwargs)
+
+            # Add autoregressive loss if training and video_frames provided
+            if self.model.training and video_frames is not None and hasattr(outputs, 'loss'):
+                # Get hidden states (need output_hidden_states=True in config)
+                if hasattr(outputs, 'hidden_states') and outputs.hidden_states is not None:
+                    last_hidden_state = outputs.hidden_states[-1]
+
+                    # Compute autoregressive loss
+                    ar_loss = self.model.autoregressive_module.compute_autoregressive_loss(
+                        last_hidden_state, video_frames
+                    )
+
+                    # Add to main loss
+                    outputs.loss = outputs.loss + ar_loss
+
+            return outputs
+
+        self.model.forward = forward_with_autoregressive
+        Logging.info("✅ Model forward method patched with autoregressive loss")
 
     def _load_mm_projector(self):
         pretrain_mm_mlp_adapter = self.config.model_config.pretrain_mm_mlp_adapter
@@ -252,7 +331,7 @@ class TrainRunner:
             trainer_cls = DLLMTrainer
         else:
             raise ValueError(
-                f"Unsupported trainer backend: {self.config.trainer_args.trainer_backend}"
+                f"Unsupported trainer type: {self.config.trainer_type}"
             )
         from transformers.trainer_pt_utils import AcceleratorConfig
 

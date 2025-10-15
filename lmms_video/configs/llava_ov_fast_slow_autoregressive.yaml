@@ -4,7 +4,7 @@
 
 - type: trainer
   config:
-    trainer_type: autoregressive_trainer
+    trainer_type: hf_trainer
 
     # ==================== 数据集配置 ====================
     dataset_config:
@@ -13,18 +13,17 @@
 
       # Parquet 文件路径（支持通配符）
       dataset_path: "/blob/LLaVA-Video-178K-parquet/*.parquet"
-      data_folder: /blob/LLaVA-Video-178K-parquet
 
-      # 视频处理参数
-      max_frames_num: 16
-      fps: 1.0
-      force_sample: true
-      video_decode_backend: "decord"
+      # 视频处理参数（使用 DatasetConfig 支持的参数）
+      video_sampling_strategy: "frame_num"  # 或 "fps"
+      frame_num: 16  # 采样帧数
+      fps: 1  # 采样帧率（当 strategy 为 fps 时使用）
+      video_backend: "decord"  # 视频解码后端
 
       # Processor 配置
       processor_config:
-        processor_name: "lmms-lab/llava-onevision-qwen2-7b-ov"
-        processor_type: "llava_onevision"
+        processor_name: "llava-hf/llava-onevision-qwen2-7b-ov-hf"
+        processor_type: "llava"  # 使用 llava processor (LLaVA-OneVision 兼容)
         max_pixels: 1003520
         min_pixels: 4096
 
@@ -33,42 +32,35 @@
 
     # ==================== 模型配置 ====================
     model_config:
-      # LLaVA-OneVision 基础模型
-      load_from_pretrained_path: "lmms-lab/llava-onevision-qwen2-7b-ov"
+      # LLaVA-OneVision 基础模型 (使用官方HF版本，配置结构正确)
+      load_from_pretrained_path: "llava-hf/llava-onevision-qwen2-7b-ov-hf"
       attn_implementation: "flash_attention_2"
-      vision_tower: "google/siglip-so400m-patch14-384"
 
-      # 🔥 启用自回归重建
-      enable_autoregressive: true
+      # 所有额外配置放在 overwrite_config 中
+      overwrite_config:
+        # 模型配置参数
+        output_hidden_states: true
 
-      # 🔥🔥 快慢帧 + 自回归配置
-      autoregressive_config:
-        # 基础参数
-        embedding_dim: 1152
-        hidden_size: 3584
-        loss_weight: 0.15
-        num_heads: 8
-        num_layers: 3
+        # 🔥 启用自回归重建
+        enable_autoregressive: true
 
-        # 快慢帧核心参数
-        mm_spatial_pool_stride: 4
-        mm_spatial_pool_mode: "average"
-        frame_sampling_strategy: "interleave"
-        slow_frame_ratio: 0.5
+        # 🔥🔥 快慢帧 + 自回归配置 (LLaVA-NeXT 风格)
+        autoregressive_config:
+          # 基础参数
+          embedding_dim: 1152
+          # hidden_size 会从模型主配置自动获取，不需要在这里指定
+          loss_weight: 1.0  # 1:1 权重，自回归损失与语言模型损失同等重要
+          num_heads: 8
+          num_layers: 3
 
-        # 帧级别因果mask
-        use_frame_causal_mask: true
+          # LLaVA-NeXT 空间池化参数
+          mm_spatial_pool_stride: 4
+          mm_spatial_pool_mode: "average"
+          add_faster_video: true  # 启用快帧处理
 
-        # 快慢帧时序采样
-        use_fast_slow_frames: true
-        fast_stride: 1
-        slow_stride: 4
-        num_fast: 8
-        num_slow: 8
-
-        # LLaVA-NeXT 多尺度特性
-        enable_multiscale_pooling: true
-        add_faster_video: true
+          # 快慢帧类型分配策略
+          frame_sampling_strategy: "interleave"  # interleave/periodic/uniform
+          slow_frame_ratio: 0.25  # 慢帧比例 (0.25 = 每4帧一个慢帧)
 
     # ==================== 训练参数 ====================
     output_dir: "./output/llava_ov_fast_slow_autoregressive"
@@ -97,7 +89,7 @@
     save_strategy: "steps"
     save_steps: 500
     save_total_limit: 3
-    evaluation_strategy: "no"
+    eval_strategy: "no"
 
     logging_dir: "./logs"
     report_to: ["tensorboard"]
@@ -112,14 +104,3 @@
     # ==================== 其他 ====================
     seed: 42
     ddp_find_unused_parameters: false
-    output_hidden_states: true
-    model_max_length: 2048
-    padding_side: "right"
-
-    # Vision 配置
-    image_aspect_ratio: "anyres_max_9"
-    mm_patch_merge_type: "spatial_unpad"
-    mm_newline_position: "grid"
-
-    modality: "video"
-    use_video: true

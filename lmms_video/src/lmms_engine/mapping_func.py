@@ -67,7 +67,30 @@ def register_model(
 
 def create_model_from_pretrained(load_from_pretrained_path):
     # Handle both config object and model name/path
-    config = AutoConfig.from_pretrained(load_from_pretrained_path)
+    config = AutoConfig.from_pretrained(load_from_pretrained_path, trust_remote_code=True)
+
+    Logging.info(f"Model config type: {config.model_type}")
+    Logging.info(f"Model config class: {type(config)}")
+    Logging.info(f"Model path: {load_from_pretrained_path}")
+    
+    # Special handling for LLaVA-OneVision models
+    # Some OneVision models incorrectly have model_type="llava" but architecture="LlavaQwenForCausalLM"
+    is_onevision = (
+        config.model_type == "llava_onevision" or
+        "onevision" in load_from_pretrained_path.lower() or
+        "llava-ov" in load_from_pretrained_path.lower() or
+        (hasattr(config, 'architectures') and 
+         config.architectures and
+         any('Qwen' in arch for arch in config.architectures))
+    )
+    
+    if is_onevision:
+        from transformers import LlavaOnevisionForConditionalGeneration
+        Logging.info("✓ Detected LLaVA-OneVision model")
+        Logging.info(f"  Architecture: {config.architectures if hasattr(config, 'architectures') else 'N/A'}")
+        Logging.info("  Using: LlavaOnevisionForConditionalGeneration")
+        return LlavaOnevisionForConditionalGeneration
+
     if type(config) in AutoModelForCausalLM._model_mapping.keys():
         model_class = AutoModelForCausalLM
     elif type(config) in AutoModelForImageTextToText._model_mapping.keys():
@@ -78,6 +101,8 @@ def create_model_from_pretrained(load_from_pretrained_path):
         model_class = AutoModel
     else:
         raise ValueError(f"Model {load_from_pretrained_path} is not supported.")
+
+    Logging.info(f"Using Auto model class: {model_class}")
     return model_class
 
 
